@@ -68,6 +68,15 @@ pkgsUnfree.testers.runNixOSTest {
               extraFileExtensions = "srt,ass,ssa";
               enableMediaInfo = false;
             };
+            metadata = {
+              PlexMetadata = {
+                enable = true;
+                fields = {
+                  seriesPlexMatchFile = true;
+                  episodeMappings = true;
+                };
+              };
+            };
           };
         };
 
@@ -222,6 +231,23 @@ pkgsUnfree.testers.runNixOSTest {
     assert mm['extraFileExtensions'] == 'srt,ass,ssa', "extraFileExtensions not set"
     assert mm['enableMediaInfo'] == False, "enableMediaInfo not set"
     print("Media management configured successfully!")
+
+    # Wait for metadata service and verify Plex metadata consumer
+    machine.wait_for_unit("sonarr-metadata.service", timeout=60)
+
+    metadata = machine.succeed(
+        "curl -s -H 'X-Api-Key: 0123456789abcdef0123456789abcdef' "
+        "http://127.0.0.1:8989/api/v3/metadata"
+    )
+    metadata_list = json.loads(metadata)
+    print(f"Metadata: {metadata}")
+    plex = next((m for m in metadata_list if m['implementation'] == 'PlexMetadata'), None)
+    assert plex is not None, "Expected PlexMetadata consumer"
+    assert plex['enable'] == True, "PlexMetadata not enabled"
+    plex_fields = {f['name']: f['value'] for f in plex['fields']}
+    assert plex_fields['seriesPlexMatchFile'] == True, "seriesPlexMatchFile not set"
+    assert plex_fields['episodeMappings'] == True, "episodeMappings not set"
+    print("Metadata configured successfully!")
 
     # Verify the service is running under the correct user
     machine.succeed("pgrep -u testuser Sonarr")
