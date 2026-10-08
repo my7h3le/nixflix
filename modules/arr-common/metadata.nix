@@ -23,7 +23,7 @@ in
           options = {
             enable = mkOption {
               type = types.bool;
-              default = true;
+              default = false;
               description = "Whether to enable this metadata consumer.";
             };
             fields = mkOption {
