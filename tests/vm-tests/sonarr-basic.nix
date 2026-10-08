@@ -69,6 +69,37 @@ pkgsUnfree.testers.runNixOSTest {
               enableMediaInfo = false;
             };
             metadata = {
+              XbmcMetadata = {
+                enable = true;
+                fields = {
+                  seriesMetadata = true;
+                  seriesMetadataEpisodeGuide = true;
+                  seriesMetadataUrl = true;
+                  episodeMetadata = true;
+                  episodeImageThumb = true;
+                  seriesImages = true;
+                  seasonImages = true;
+                  episodeImages = true;
+                };
+              };
+              RoksboxMetadata = {
+                enable = false;
+                fields = {
+                  episodeMetadata = true;
+                  seriesImages = true;
+                  seasonImages = true;
+                  episodeImages = true;
+                };
+              };
+              WdtvMetadata = {
+                enable = true;
+                fields = {
+                  episodeMetadata = true;
+                  seriesImages = true;
+                  seasonImages = true;
+                  episodeImages = true;
+                };
+              };
               PlexMetadata = {
                 enable = true;
                 fields = {
@@ -232,21 +263,49 @@ pkgsUnfree.testers.runNixOSTest {
     assert mm['enableMediaInfo'] == False, "enableMediaInfo not set"
     print("Media management configured successfully!")
 
-    # Wait for metadata service and verify Plex metadata consumer
+    # Wait for metadata service and verify metadata consumers
     machine.wait_for_unit("sonarr-metadata.service", timeout=60)
 
     metadata = machine.succeed(
         "curl -s -H 'X-Api-Key: 0123456789abcdef0123456789abcdef' "
         "http://127.0.0.1:8989/api/v3/metadata"
     )
-    metadata_list = json.loads(metadata)
     print(f"Metadata: {metadata}")
-    plex = next((m for m in metadata_list if m['implementation'] == 'PlexMetadata'), None)
-    assert plex is not None, "Expected PlexMetadata consumer"
-    assert plex['enable'] == True, "PlexMetadata not enabled"
-    plex_fields = {f['name']: f['value'] for f in plex['fields']}
-    assert plex_fields['seriesPlexMatchFile'] == True, "seriesPlexMatchFile not set"
-    assert plex_fields['episodeMappings'] == True, "episodeMappings not set"
+    consumers = {m['implementation']: m for m in json.loads(metadata)}
+    expected_metadata = {
+        'XbmcMetadata': (True, {
+            'seriesMetadata': True,
+            'seriesMetadataEpisodeGuide': True,
+            'seriesMetadataUrl': True,
+            'episodeMetadata': True,
+            'episodeImageThumb': True,
+            'seriesImages': True,
+            'seasonImages': True,
+            'episodeImages': True,
+        }),
+        'RoksboxMetadata': (False, {
+            'episodeMetadata': True,
+            'seriesImages': True,
+            'seasonImages': True,
+            'episodeImages': True,
+        }),
+        'WdtvMetadata': (True, {
+            'episodeMetadata': True,
+            'seriesImages': True,
+            'seasonImages': True,
+            'episodeImages': True,
+        }),
+        'PlexMetadata': (True, {
+            'seriesPlexMatchFile': True,
+            'episodeMappings': True,
+        }),
+    }
+    for implementation, (enabled, fields) in expected_metadata.items():
+        consumer = consumers[implementation]
+        assert consumer['enable'] == enabled, f"{implementation} enable not set"
+        actual_fields = {f['name']: f['value'] for f in consumer['fields']}
+        for name, value in fields.items():
+            assert actual_fields[name] == value, f"{implementation}.{name} not set"
     print("Metadata configured successfully!")
 
     # Verify the service is running under the correct user
