@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- `nixflix.jellyfin.users.<name>.policy.enabledFolders` to restrict a user to specific Jellyfin libraries by name instead of giving every user access to all of them. `policy.enableAllFolders` now defaults to `false` when `enabledFolders` is set. Note that a user with `enableAllFolders = false` and `mutable = false` now has their library selection overwritten from Nix on every rebuild
 - Added Navidrome plugin support ([#372](https://github.com/kiriwalawren/nixflix/pull/372))
 - `nixflix.<sonarr|sonarr-anime|radarr|lidarr>.config.metadata` to configure metadata consumers (Settings → Metadata), e.g. Plex series match files and episode mappings ([#373](https://github.com/kiriwalawren/nixflix/pull/373))
 
